@@ -112,14 +112,12 @@ def datetime_filter(t):
 async def init(loop):
     await orm.create_pool(loop=loop, host='127.0.0.1', port=3306, user='root', password='password', db='allan')
     # DeprecationWarning: loop argument is deprecated
-    app = web.Application(loop = loop, middlewares=[ # 拦截器 一个URL在被某个函数处理前，可以经过一系列的middleware的处理。
-        logger_factory, response_factory # 工厂模式
+    app = web.Application(middlewares=[
+        logger_factory, response_factory
     ])
     init_jinja2(app, filters=dict(datetime=datetime_filter))
     add_routes(app, 'handlers')
     add_static(app)
-
-    # DeprecationWarning: Application.make_handler(...) is deprecated, use AppRunner API instead
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, '127.0.0.1', 9000)
