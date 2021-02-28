@@ -85,11 +85,11 @@ async def response_factory(app, handler):
                 resp.content_type = 'text/html;charset=utf-8'
                 return resp
         if isinstance(r, int) and r >= 100 and r < 600:
-            return web.Response(r)
+            return web.Response(text=r)
         if isinstance(r, tuple) and len(r) == 2:
             t, m = r
             if isinstance(t, int) and t >= 100 and t < 600:
-                return web.Response(t, str(m))
+                return web.Response(text=t,body=str(m))
         # default:
         resp = web.Response(body=str(r).encode('utf-8'))
         resp.content_type = 'text/plain;charset=utf-8'
@@ -110,21 +110,25 @@ def datetime_filter(t):
     return u'%s年%s月%s日' % (dt.year, dt.month, dt.day)
 
 async def init(loop):
-    await orm.create_pool(loop=loop, host='127.0.0.1', port=3306, user='www', password='www', db='allan')
-    app = web.Application(loop=loop, middlewares=[
-        logger_factory, response_factory
+    await orm.create_pool(loop=loop, host='127.0.0.1', port=3306, user='root', password='password', db='allan')
+    # DeprecationWarning: loop argument is deprecated
+    app = web.Application(loop = loop, middlewares=[ # 拦截器 一个URL在被某个函数处理前，可以经过一系列的middleware的处理。
+        logger_factory, response_factory # 工厂模式
     ])
     init_jinja2(app, filters=dict(datetime=datetime_filter))
     add_routes(app, 'handlers')
     add_static(app)
-    srv = await loop.create_server(app.make_handler(), '127.0.0.1', 9000)
+
+    # DeprecationWarning: Application.make_handler(...) is deprecated, use AppRunner API instead
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, '127.0.0.1', 9000)
     logging.info('server started at http://127.0.0.1:9000...')
-    return srv
+    await site.start()
 
 
+#  这里又用廖老师的老代码， 懒得管了能跑就行
 loop = asyncio.get_event_loop()
 loop.run_until_complete(init(loop))
 loop.run_forever()
-
-
 
